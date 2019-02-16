@@ -7,7 +7,7 @@ import os
 import math
 import json
 from PyQt5 import QtCore, QtGui, QtWidgets
-from tcp import Ui_MainWindow
+from gui import Ui_MainWindow
 import time
 
 def _toUTF8(s):
