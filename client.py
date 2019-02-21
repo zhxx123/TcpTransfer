@@ -40,15 +40,15 @@ class TcpClient(QtCore.QThread):
             return True
         return False
 
-    def setIpPort(self,ip,port,msgtype,msg,ids="zhxx"):
+    def setIpPort(self,ip,port,ids,msgtype,msg):
         self.server_ip=ip
         self.server_port=port
         self.filename=msg
         self.msgtype=msgtype
         self.id=ids
-    def slotTcpSendMsg(self,ips,ports,types,msgs):
+    def slotTcpSendMsg(self,ips,ports,ids,types,msgs):
         # print("tcpclient send msg:",ips,ports,types,msgs)
-        self.setIpPort(ips,ports,types,msgs)
+        self.setIpPort(ips,ports,ids,types,msgs)
         if not self.isconnect(ips):
             self.tcpSocket=QTcpSocket()
             self.tcpSocket.connected.connect(self.connected)
@@ -197,6 +197,7 @@ class TcpClient(QtCore.QThread):
     def getHeader(self,fname,flen,fnum,type=0):
         data={}
         data["type"]=type
+        data["id"] =self.id
         data["filename"]=fname
         data["filelen"]=flen
         data["fnum"]=fnum
@@ -205,6 +206,7 @@ class TcpClient(QtCore.QThread):
     def confirmHeader(self,type=3):
         data={}
         data["type"]=type
+        data["id"] =self.id
         data["confirm"]="send"
         data["status"] =0
         strs=json.dumps(data)
@@ -222,12 +224,12 @@ class Client(QtCore.QThread):
     signLog=QtCore.pyqtSignal(str)
     signFileBtn=QtCore.pyqtSignal(int)
     signFileBar=QtCore.pyqtSignal(int,int)
-    signSend=QtCore.pyqtSignal(str,str,int,str) #ip,port, type, msg
+    signSend=QtCore.pyqtSignal(str,str,str,int,str) #ip,port, type, msg
     def __init__(self,parent=None):
         super(Client, self).__init__(parent)
         self.id="zhxx"
         self.ip="127.0.0.1"
-        self.port="8888"
+        self.port="8721"
         tcpclient=TcpClient(self)
         # client -> tcpclient
         self.signSend.connect(tcpclient.slotTcpSendMsg)
@@ -243,9 +245,9 @@ class Client(QtCore.QThread):
     def soltRecvMsg(self,msg):
         # print(msg)
         pass
-    def slotSendMsg(self,ips,ports,types,msg):
+    def slotSendMsg(self,ips,ports,ids,types,msg):
         # print("client send msg",ips,ports,types,msg)
-        self.signSend.emit(ips,ports,types,msg)
+        self.signSend.emit(ips,ports,ids,types,msg)
         pass
     def soltFileUi(self,flag):
         self.signFileBtn.emit(flag)

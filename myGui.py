@@ -21,24 +21,27 @@ class myQWidget(QtWidgets.QWidget):
     def __init__(self,parent=None):
         super(myQWidget, self).__init__(parent)
         #窗体背景
+        # self.setWindowFlags(QtCore.Qt.FramelessWindowHint | QtCore.Qt.Tool)
+        # self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        # self.setWindowOpacity(0.5)
         self.setPalette(QtGui.QPalette(QtCore.Qt.gray))
         self.setAutoFillBackground(True)
         self.setAcceptDrops(True)
         #其他变量
         self.DirFlag=False
-        self.pix = QtGui.QPixmap('../config/exe.png')
+        self.pix = QtGui.QPixmap('./config/exe.png')
         # self.setUI()
     # def setUI(self):
         #新建窗体
         self.imageLabel = QtWidgets.QLabel(self)
-        self.imageLabel.setGeometry(QtCore.QRect(130,10,121,111))
+        self.imageLabel.setGeometry(QtCore.QRect(120,10,101,101))
 
         self.fpathLabel = QtWidgets.QLabel(self)
-        self.fpathLabel.setGeometry(QtCore.QRect(50,130,261,31))
+        self.fpathLabel.setGeometry(QtCore.QRect(70,120,221,31))
         self.fpathLabel.setAlignment(QtCore.Qt.AlignCenter)
 
         self.widget_file = QtWidgets.QWidget(self)
-        self.widget_file.setGeometry(QtCore.QRect(10, 160, 361, 191))
+        self.widget_file.setGeometry(QtCore.QRect(10, 160, 321, 181))
         self.widget_file.setObjectName(_fromUtf8("widget_file"))
 
         self.label_fiel_all = QtWidgets.QLabel(self.widget_file)
@@ -66,23 +69,23 @@ class myQWidget(QtWidgets.QWidget):
         self.label_bar_info.setObjectName("label_bar_info")
 
         self.label_path_2 = QtWidgets.QLabel(self.widget_file)
-        self.label_path_2.setGeometry(QtCore.QRect(70, 30, 261, 31))
+        self.label_path_2.setGeometry(QtCore.QRect(70, 30, 241, 31))
         self.label_path_2.setObjectName(_fromUtf8("label_path_2"))
 
         self.label_size_2 = QtWidgets.QLabel(self.widget_file)
-        self.label_size_2.setGeometry(QtCore.QRect(70, 60, 261, 31))
+        self.label_size_2.setGeometry(QtCore.QRect(70, 60, 241, 31))
         self.label_size_2.setObjectName(_fromUtf8("label_size_2"))
 
         self.label_auth_2 = QtWidgets.QLabel(self.widget_file)
-        self.label_auth_2.setGeometry(QtCore.QRect(70, 90, 261, 31))
+        self.label_auth_2.setGeometry(QtCore.QRect(70, 90, 241, 31))
         self.label_auth_2.setObjectName(_fromUtf8("label_auth_2"))
 
         self.label_sum_2 = QtWidgets.QLabel(self.widget_file)
-        self.label_sum_2.setGeometry(QtCore.QRect(70, 120, 261, 31))
+        self.label_sum_2.setGeometry(QtCore.QRect(70, 120, 241, 31))
         self.label_sum_2.setObjectName(_fromUtf8("label_sum_2"))
 
         self.progressBa_send = QtWidgets.QProgressBar(self.widget_file)
-        self.progressBa_send.setGeometry(QtCore.QRect(70, 170, 281, 16))
+        self.progressBa_send.setGeometry(QtCore.QRect(70, 170, 241, 16))
         self.progressBa_send.setProperty("value", 10)
         self.progressBa_send.setObjectName("progressBa_send")
 

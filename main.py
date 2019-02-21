@@ -5,6 +5,7 @@ import socket
 import sys
 import os
 import math
+import random
 import json
 from PyQt5 import QtCore, QtGui, QtWidgets
 from gui import Ui_MainWindow
@@ -21,7 +22,7 @@ except AttributeError:
         return s
 
 class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
-    signSend = QtCore.pyqtSignal(str,str,int,str) #ip,port, type, msg
+    signSend = QtCore.pyqtSignal(str,str,str,int,str) #ip,port, type, msg
     def __init__(self,parent=None):  
         super(mywindow,self).__init__(parent)
         self.setupUi(self)
@@ -35,7 +36,7 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
         self.max_log_num = 100
         #socket image
         self.server_ip="127.0.0.1"
-        self.server_port="8888"
+        self.server_port="8721"
         #初始化 链接
         # time update #槽函数
         self.timer =QtCore.QTimer(self)
@@ -44,7 +45,7 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
         self.timer.start(1000)
         # sendline signal
         self.widget_my.fileSignal.connect(self.slotSendLine)
-
+        self.lineEdit_fname_msg.returnPressed.connect(self.slotSendLineMsg)
         #tcp server 
         self.server = Server()
         self.server.signRecv.connect(self.slotRecvMsgFromServer)
@@ -84,7 +85,8 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
 
     #*************** tool function *****************
     def getTime(self):
-        formats="%Y-%m-%d %H:%M:%S"
+        # formats="%Y-%m-%d %H:%M:%S"
+        formats="%Y-%m-%d %H:%M"
         now_time = time.strftime(formats,time.localtime())
         return now_time
 
@@ -95,6 +97,15 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
     @QtCore.pyqtSlot()
     def on_pushButton_log_clicked(self):
         if not self.islogin:
+            value, ok = QtWidgets.QInputDialog.getText(self, "登录", "请入任意用户名\n", QtWidgets.QLineEdit.Normal, "")
+            if ok:
+                self.id=value
+            else:
+                self.id="id"+str(random.randint(1,99))
+            username="hello, "+self.id+"!"
+            self.label_head_user.setText(username)
+            log_content="login successful: %s" %(self.id)
+            self.logprint(log_content)
             #登录函数
             self.login_process = LoginHandler(self.id)
             #登陆完成的信号绑定到登陆结束的槽函数
@@ -117,14 +128,8 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
 
     @QtCore.pyqtSlot()
     def on_pushButton_send_msg_clicked(self):
-        self.server_ip=_toUTF8(self.lineEdit.text())
-        self.server_port=_toUTF8(self.lineEdit_2.text())
-        msg=_toUTF8(self.lineEdit_fname_msg.text())
-        if msg!="":
-            self.signSend.emit(self.server_ip,self.server_port,1,msg)
-        else:
-            log_content="send msg not empty!!!"
-            self.logprint(log_content)
+        self.slotSendLineMsg()
+
     @QtCore.pyqtSlot()
     def on_pushButton_send_file_clicked(self):
         #获取信息
@@ -133,39 +138,39 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
         files=_toUTF8(self.lineEdit_fname.text())
         if files!='':
             if not self.isExistFile(files):
-                log_content="%s not files or not exists!" %(files)
+                log_content="'%s' not files or not exists!" %(files)
                 self.logprint(log_content)
                 return
             #process_bar
             self.widget_my.progressBa_send.show()
             self.widget_my.progressBa_send.setValue(0)
 
-            self.signSend.emit(self.server_ip,self.server_port,2,files)
+            self.signSend.emit(self.server_ip,self.server_port,self.id,2,files)
             
-            log_content="send %s to %s" %(files,self.server_ip,self.server_port)
+            log_content="send %s to %s" %(files,self.server_ip)
             self.logprint(log_content)
             self.pushButton_send_file.setEnabled(False)
-        else:
-            log_content="send file is empty!!!"
-            self.logprint(log_content)
+        # else:
+        #     log_content="send file is empty!!!"
+        #     self.logprint(log_content)
 
-    @QtCore.pyqtSlot(str)
-    def slotRecvMsgFromServer(self, msg):
+    @QtCore.pyqtSlot(str,str)
+    def slotRecvMsgFromServer(self,ids,msg):
+        print(ids)
         self.logprint(msg)
         # self.pushButton_send_file.setEnabled(True)
     def slotRecvLogServer(self,logMsg):
         self.logprint(logMsg)
 
-    @QtCore.pyqtSlot(str,str)
-    def soltLoginEnd(self, words,ipaddr):
-        self.label_head_user.setText(words)
+    @QtCore.pyqtSlot(str)
+    def soltLoginEnd(self,ipaddr):
         self.lineEdit.setText(ipaddr)
         # self.pushButton_log.setDisabled(True)
-        log_content="login succeed, %s %s" %(words,ipaddr)
+        log_content="set default ip: %s" %(ipaddr)
         self.logprint(log_content)
     def login_init(self):
         self.label_head_user.setText("")
-        self.islogin==False
+        self.islogin=False
     @QtCore.pyqtSlot(str)
     def soltLogPrint(self, logMsg):
         # print("clientSlot")
@@ -184,17 +189,33 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
     def slotSendLine(self, words):
         self.lineEdit_fname.setText(words)
         self.pushButton_send_file.setEnabled(True)
-    
+    def slotSendLineMsg(self):
+        self.server_ip=_toUTF8(self.lineEdit.text())
+        self.server_port=_toUTF8(self.lineEdit_2.text())
+        msg=_toUTF8(self.lineEdit_fname_msg.text())
+        if msg!="":
+            self.signSend.emit(self.server_ip,self.server_port,self.id,1,msg)
+            self.lineEdit_fname_msg.clear()
+        # else:
+        #     log_content="send msg not empty!!!"
+        #     self.logprint(log_content)
     #logprint
+    def setTextStyle(self,strs):
+        tmps="    "+strs
+        return tmps
     def logprint(self,strs):
         self.log_numer=self.log_numer+1
-        log_content=self.ToQUtf8("[{}] {}\n    {}".format(self.log_numer,self.getTime(),strs))
+        log_content=self.ToQUtf8("<font color='gray'>[{}] {}</font>".format(self.log_numer,self.getTime()))
+        self.textBrowser_log.append(log_content)
+        # print(log_content)
+        log_print=self.setTextStyle(strs)
         if self.log_numer>=self.max_log_num:
             self.textBrowser_log.clear()
             self.log_numer=0
             log_content=self.ToQUtf8("已清空缓冲区")
         # self.textBrowser_log.insertPlainText(log_content) #不能自动获取焦点
-        self.textBrowser_log.append(log_content)
+        # print(log_print)
+        self.textBrowser_log.append(log_print)
     def isExistFile(self,files):
         if not os.path.isfile(files):
             return False
@@ -203,14 +224,15 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
         return True
 #login 继承自qthread, 多线程
 class LoginHandler(QtCore.QThread):
-    finishSignal = QtCore.pyqtSignal(str,str)
+    finishSignal = QtCore.pyqtSignal(str)
     def __init__(self,ids, parent=None):
         super(LoginHandler, self).__init__(parent)
         self.id=ids
     def run(self):
         time.sleep(1)
         ipaddr=self.getLocalIP()
-        self.finishSignal.emit("hello "+self.id+"!",ipaddr)
+        self.finishSignal.emit(ipaddr)
+        
     def getLocalIP(self):
         # local ip
         import socket
@@ -226,7 +248,7 @@ class LoginHandler(QtCore.QThread):
                 my_addr = socket.gethostbyname(socket.gethostname())
                 return my_addr
             except Exception as ret_e:
-                self.signal_write_msg.emit("无法获取ip，请连接网络！\n")
+                self.si.emit("无法获取ip，请连接网络！\n")
         finally:
             s.close()
         return default_ip

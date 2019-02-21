@@ -21,8 +21,8 @@ SIZEOF_INT64=8
 SIZEOF_HEAD_INT=SIZEOF_INT64*2
 FileBlockSize=10*1024*1024
 class TcpSocket(QTcpSocket):
-    signRecv=QtCore.pyqtSignal(str)#
-    signFileRecv=QtCore.pyqtSignal("QByteArray")
+    signRecv=QtCore.pyqtSignal(str,str)#
+    # signFileRecv=QtCore.pyqtSignal("QByteArray")
     signLog=QtCore.pyqtSignal(str)
     def __init__(self, socketId, parent=None):
         super(TcpSocket, self).__init__(parent)
@@ -78,9 +78,10 @@ class TcpSocket(QTcpSocket):
         if  type == 0:#default
             pass
         elif type == 1:# message
-            if "msg" in headStr.keys():
+            if "msg" in headStr.keys() and "id" in headStr.keys():
                 msg=headStr["msg"]
-                self.signRecv.emit(msg)
+                ids=headStr["id"]
+                self.signRecv.emit(ids,msg)
                 # qheaders=self.confirmHeader(3)#recv one block file complate
                 # self.sendConfirm(qheaders)
         elif type == 2:#file
@@ -136,7 +137,7 @@ class TcpSocket(QTcpSocket):
         self.disconnectFromHost()
         self.close()
 class ServerSocketThread(QtCore.QThread):
-    signRecv=QtCore.pyqtSignal(str)
+    signRecv=QtCore.pyqtSignal(str,str)
     signLog=QtCore.pyqtSignal(str)
     signSend=QtCore.pyqtSignal(str,str,int)
     def __init__(self, socketId, parent):
@@ -159,15 +160,15 @@ class ServerSocketThread(QtCore.QThread):
         # this thread - > socket
         self.signSend.connect(self.slotSendMsg)
         self.exec_()
-    def slotRecvMsg(self,msg):
-        self.signRecv.emit(msg)
+    def slotRecvMsg(self,ids,msg):
+        self.signRecv.emit(ids,msg)
         pass
     def slotSendMsg(self,msg):
         pass
     def soltLogPrint(self,logMsg):
         self.signLog.emit(logMsg)
 class TcpServer(QTcpServer):
-    signRecv = QtCore.pyqtSignal(str)
+    signRecv = QtCore.pyqtSignal(str,str)
     signLog = QtCore.pyqtSignal(str)
     # 存放socket id
     socketList = []
@@ -188,21 +189,21 @@ class TcpServer(QTcpServer):
         socket_t.signRecv.connect(self.soltRecvMsg)
         socket_t.signLog.connect(self.soltLogPrint)
         socket_t.start()
-    def soltRecvMsg(self,msg):
-        self.signRecv.emit(msg)
+    def soltRecvMsg(self,ids,msg):
+        self.signRecv.emit(ids,msg)
     def soltLogPrint(self,logMsg):
         self.signLog.emit(logMsg)
 class Server(QtCore.QThread):
-    signRecv = QtCore.pyqtSignal(str)
+    signRecv = QtCore.pyqtSignal(str,str)
     signLog = QtCore.pyqtSignal(str)
     def __init__(self, parent=None):
         super(Server, self).__init__(parent)
 
         self.tcpServer = TcpServer(self)  #指定父对象自动回收空间 监听套接字                     
-        self.tcpServer.listen(QHostAddress.Any, 8888) #通信套接字 any默认绑定当前网卡的所有IP
+        self.tcpServer.listen(QHostAddress.Any, 8721) #通信套接字 any默认绑定当前网卡的所有IP
         self.tcpServer.signRecv.connect(self.soltRecvMsg)
         self.tcpServer.signLog.connect(self.soltRecvLogMsg)
-    def soltRecvMsg(self,msg):
-        self.signRecv.emit(msg)
+    def soltRecvMsg(self,ids,msg):
+        self.signRecv.emit(ids,msg)
     def soltRecvLogMsg(self,logMsg):
         self.signLog.emit(logMsg)
