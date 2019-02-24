@@ -30,7 +30,7 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
         # self.lineEdit_2.setFocusPolicy(False)
         self.lineEdit_2.setEnabled(False)
         self.islogin=False
-        self.id="zhxx"
+        self.id="id0"
         self.log_numer = 0
         # log 缓冲区大小
         self.max_log_num = 100
@@ -51,6 +51,10 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
         self.server.signRecv.connect(self.slotRecvMsgFromServer)
         self.server.signLog.connect(self.slotRecvLogServer)
         self.server.start()
+        # self.sthread = threading.QThread()
+        # self.server.moveToThread(self.sthread)
+        # self.sthread.started.connect(self.server.run)
+
         port=_toUTF8(self.lineEdit_2.text())
         log_content="server listen *:%s" %(port)
         self.logprint(log_content)
@@ -63,6 +67,7 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
         self.client.signLog.connect(self.soltLogPrint)
         self.client.signFileBtn.connect(self.soltFileUi)
         self.client.signFileBar.connect(self.soltFileBar)
+        self.client.signFileSpeed.connect(self.soltFileSpeed)
         self.client.start()
         # thread_t =threading.Thread(target=self.getScrollText,args=(self.sigSetTime,))
         # thread_t.setDaemon(True)
@@ -104,7 +109,7 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
                 self.id="id"+str(random.randint(1,99))
             username="hello, "+self.id+"!"
             self.label_head_user.setText(username)
-            log_content="login successful: %s" %(self.id)
+            log_content="login successful,use random id: %s" %(self.id)
             self.logprint(log_content)
             #登录函数
             self.login_process = LoginHandler(self.id)
@@ -156,8 +161,7 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
 
     @QtCore.pyqtSlot(str,str)
     def slotRecvMsgFromServer(self,ids,msg):
-        print(ids)
-        self.logprint(msg)
+        self.logprintmsg(ids,msg)
         # self.pushButton_send_file.setEnabled(True)
     def slotRecvLogServer(self,logMsg):
         self.logprint(logMsg)
@@ -173,18 +177,23 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
         self.islogin=False
     @QtCore.pyqtSlot(str)
     def soltLogPrint(self, logMsg):
-        # print("clientSlot")
         self.logprint(logMsg)
         # log_content="disconnect from %s:%s" %(self.server_ip,self.server_port)
     @QtCore.pyqtSlot(int)
     def soltFileUi(self, flag):
         if flag ==1:
             self.pushButton_send_file.setEnabled(True)
+
     @QtCore.pyqtSlot(int,int)
     def soltFileBar(self,maxnum,nownum):
         self.widget_my.progressBa_send.setMaximum(maxnum)
         self.widget_my.progressBa_send.setValue(nownum)
-    
+
+    @QtCore.pyqtSlot(str,str)
+    def soltFileSpeed(self,str_time,str_speed):
+        self.widget_my.label_time_2.setText(str_time)
+        self.widget_my.label_speed_2.setText(str_speed)
+
     @QtCore.pyqtSlot(str)
     def slotSendLine(self, words):
         self.lineEdit_fname.setText(words)
@@ -195,10 +204,9 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
         msg=_toUTF8(self.lineEdit_fname_msg.text())
         if msg!="":
             self.signSend.emit(self.server_ip,self.server_port,self.id,1,msg)
+            self.logprintmsg(self.id,msg)
             self.lineEdit_fname_msg.clear()
-        # else:
-        #     log_content="send msg not empty!!!"
-        #     self.logprint(log_content)
+            
     #logprint
     def setTextStyle(self,strs):
         tmps="    "+strs
@@ -206,6 +214,19 @@ class mywindow(QtWidgets.QMainWindow,Ui_MainWindow):
     def logprint(self,strs):
         self.log_numer=self.log_numer+1
         log_content=self.ToQUtf8("<font color='gray'>[{}] {}</font>".format(self.log_numer,self.getTime()))
+        self.textBrowser_log.append(log_content)
+        # print(log_content)
+        log_print=self.setTextStyle(strs)
+        if self.log_numer>=self.max_log_num:
+            self.textBrowser_log.clear()
+            self.log_numer=0
+            log_content=self.ToQUtf8("已清空缓冲区")
+        # self.textBrowser_log.insertPlainText(log_content) #不能自动获取焦点
+        # print(log_print)
+        self.textBrowser_log.append(log_print)
+    def logprintmsg(self,ids,strs):
+        self.log_numer=self.log_numer+1
+        log_content=self.ToQUtf8("<font color='gray'>[{}] {} {}</font>".format(self.log_numer,self.getTime(),ids))
         self.textBrowser_log.append(log_content)
         # print(log_content)
         log_print=self.setTextStyle(strs)
@@ -254,7 +275,7 @@ class LoginHandler(QtCore.QThread):
         return default_ip
 
 if __name__=="__main__":  
-    app=QtWidgets.QApplication(sys.argv)  
+    app=QtWidgets.QApplication(sys.argv)
     myshow=mywindow()
     myshow.show()
     sys.exit(app.exec_())  

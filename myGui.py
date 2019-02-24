@@ -37,57 +37,71 @@ class myQWidget(QtWidgets.QWidget):
         self.imageLabel.setGeometry(QtCore.QRect(120,10,101,101))
 
         self.fpathLabel = QtWidgets.QLabel(self)
-        self.fpathLabel.setGeometry(QtCore.QRect(70,120,221,31))
+        self.fpathLabel.setGeometry(QtCore.QRect(70,110,191,31))
         self.fpathLabel.setAlignment(QtCore.Qt.AlignCenter)
 
         self.widget_file = QtWidgets.QWidget(self)
-        self.widget_file.setGeometry(QtCore.QRect(10, 160, 321, 181))
+        self.widget_file.setGeometry(QtCore.QRect(10, 140, 321, 201))
         self.widget_file.setObjectName(_fromUtf8("widget_file"))
 
         self.label_fiel_all = QtWidgets.QLabel(self.widget_file)
-        self.label_fiel_all.setGeometry(QtCore.QRect(0, 0, 71, 31))
+        self.label_fiel_all.setGeometry(QtCore.QRect(0, 0, 63, 23))
         self.label_fiel_all.setObjectName(_fromUtf8("label_fiel_all"))
 
         self.label_size = QtWidgets.QLabel(self.widget_file)
-        self.label_size.setGeometry(QtCore.QRect(30, 60, 41, 31))
+        self.label_size.setGeometry(QtCore.QRect(30, 50, 33, 23))
         self.label_size.setObjectName(_fromUtf8("label_size"))
 
         self.label_path = QtWidgets.QLabel(self.widget_file)
-        self.label_path.setGeometry(QtCore.QRect(30, 30, 41, 31))
+        self.label_path.setGeometry(QtCore.QRect(30, 20, 33, 23))
         self.label_path.setObjectName(_fromUtf8("label_path"))
 
         self.label_auth = QtWidgets.QLabel(self.widget_file)
-        self.label_auth.setGeometry(QtCore.QRect(30, 90, 41, 31))
+        self.label_auth.setGeometry(QtCore.QRect(30, 80, 33, 23))
         self.label_auth.setObjectName(_fromUtf8("label_auth"))
 
         self.label_sum = QtWidgets.QLabel(self.widget_file)
-        self.label_sum.setGeometry(QtCore.QRect(0, 120, 71, 31))
+        self.label_sum.setGeometry(QtCore.QRect(0, 110, 63, 23))
         self.label_sum.setObjectName(_fromUtf8("label_sum"))
 
         self.label_bar_info = QtWidgets.QLabel(self.widget_file)
-        self.label_bar_info.setGeometry(QtCore.QRect(0, 160, 71, 31))
+        self.label_bar_info.setGeometry(QtCore.QRect(0, 140, 63, 23))
         self.label_bar_info.setObjectName("label_bar_info")
 
+        self.label_time_3 = QtWidgets.QLabel(self.widget_file)
+        self.label_time_3.setGeometry(QtCore.QRect(0, 170, 63, 23))
+        self.label_time_3.setObjectName("label_time_3")
+
         self.label_path_2 = QtWidgets.QLabel(self.widget_file)
-        self.label_path_2.setGeometry(QtCore.QRect(70, 30, 241, 31))
+        self.label_path_2.setGeometry(QtCore.QRect(70, 20, 241, 23))
         self.label_path_2.setObjectName(_fromUtf8("label_path_2"))
 
         self.label_size_2 = QtWidgets.QLabel(self.widget_file)
-        self.label_size_2.setGeometry(QtCore.QRect(70, 60, 241, 31))
+        self.label_size_2.setGeometry(QtCore.QRect(70, 50, 241, 23))
         self.label_size_2.setObjectName(_fromUtf8("label_size_2"))
 
         self.label_auth_2 = QtWidgets.QLabel(self.widget_file)
-        self.label_auth_2.setGeometry(QtCore.QRect(70, 90, 241, 31))
+        self.label_auth_2.setGeometry(QtCore.QRect(70, 80, 241, 23))
         self.label_auth_2.setObjectName(_fromUtf8("label_auth_2"))
 
         self.label_sum_2 = QtWidgets.QLabel(self.widget_file)
-        self.label_sum_2.setGeometry(QtCore.QRect(70, 120, 241, 31))
+        self.label_sum_2.setGeometry(QtCore.QRect(70, 110, 241, 23))
         self.label_sum_2.setObjectName(_fromUtf8("label_sum_2"))
 
         self.progressBa_send = QtWidgets.QProgressBar(self.widget_file)
-        self.progressBa_send.setGeometry(QtCore.QRect(70, 170, 241, 16))
-        self.progressBa_send.setProperty("value", 10)
+        self.progressBa_send.setGeometry(QtCore.QRect(70, 140, 241, 23))
+        self.progressBa_send.setProperty("value", 0)
         self.progressBa_send.setObjectName("progressBa_send")
+
+
+        self.label_time_2 = QtWidgets.QLabel(self.widget_file)
+        self.label_time_2.setGeometry(QtCore.QRect(70, 170, 121, 23))
+        self.label_time_2.setObjectName("label_time_2")
+        self.label_time_2.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.label_speed_2 = QtWidgets.QLabel(self.widget_file)
+        self.label_speed_2.setGeometry(QtCore.QRect(200, 170, 81, 23))
+        self.label_speed_2.setObjectName("label_speed_2")
 
         self.initUI()
         # 窗口标题
@@ -204,6 +218,7 @@ class myQWidget(QtWidgets.QWidget):
             self.label_auth.setText(_fromUtf8("权限:"))
             self.label_sum.setText(_fromUtf8("最后修改:"))            
             self.label_bar_info.setText(_fromUtf8("传输进度:"))
+            self.label_time_3.setText(_fromUtf8("预估时间:"))
             
             self.label_path_2.setText(qfilepath)
             self.label_size_2.setText(qlastsize)

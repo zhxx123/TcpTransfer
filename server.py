@@ -28,6 +28,7 @@ class TcpSocket(QTcpSocket):
         super(TcpSocket, self).__init__(parent)
         self.fileBytes = 0
         self.headSize=0
+        self.homepath=QtCore.QStandardPaths.writableLocation(QtCore.QStandardPaths.DesktopLocation)
         self.blockBytes=FileBlockSize
         self.socketId = socketId
         self.readyRead.connect(self.readMessage)
@@ -40,18 +41,18 @@ class TcpSocket(QTcpSocket):
         while self.bytesAvailable()>SIZEOF_HEAD_INT:
             if self.headSize==0:
                 self.headSize=stream.readInt64()
-                fileBytes=stream.readInt64()
-            if self.bytesAvailable() >= self.headSize + fileBytes:
+                self.fileBytes=stream.readInt64()
+            if self.bytesAvailable() >= self.headSize + self.fileBytes:
                 qheader = stream.readQString()
                 # print("server recv head:",self.headSize,qheader)
                 # if self.bytesReceive >= self.headSize+self.fileBytes+SIZEOF_HEAD_INT:
-                qfilecont=stream.readRawData(fileBytes)
+                qfilecont=stream.readRawData(self.fileBytes)
                 # if self.fileBytes > 0:
                 #     qfilecont=""
                 # self.bytesReceive += self.fileBytes
                 # self.handlerMessage(qheader,qfilecont,self.fileBytes)
                 ipaddr=self.peerAddress().toString()+":"+str(self.peerPort());
-                self.handlerMessage(qheader,qfilecont,fileBytes)
+                self.handlerMessage(qheader,qfilecont,self.fileBytes)
                 # self.signRecv.emit(ipaddr,qheader,qfilecont)
                 self.initRecv()
             else:
@@ -87,17 +88,18 @@ class TcpSocket(QTcpSocket):
         elif type == 2:#file
             filename,filelen,fnum=self.parseJsonFile(headStr)
             fstart=fnum*self.blockBytes
-            # print(filename,filelen,fstart)
             self.writeToFile(filename,fnum,fstart,qfilecont,fileBytes)
-            # qheaders=self.confirmHeader(3)#recv one block file complate
-            # self.sendConfirm(qheaders)
+            qheaders=self.confirmHeader(3)#recv one block file complate
+            self.sendConfirm(qheaders)
         elif type ==3:
-            log_content="recv file complete"
+            filename=self.renamefile(headStr)
+            log_content="complete, save in "+filename
             self.signLog.emit(log_content)
         else:
             print ("error,header",qheader)
     
     def sendConfirm(self,header):
+
         self.sendMessage(header)
     def confirmHeader(self,type=3):
         data={}
@@ -107,6 +109,8 @@ class TcpSocket(QTcpSocket):
         strs=json.dumps(data)
         return strs
     def writeToFile(self,filename,fnum,fstart,qfilecont,fileBytes):
+        
+        filename=self.homepath+"/"+filename+".down"
         if fnum==0:
             file = QtCore.QFile(filename)
             if file.exists():
@@ -128,6 +132,16 @@ class TcpSocket(QTcpSocket):
         if  "fnum" in jsonStr.keys():
             fnum=jsonStr["fnum"]
         return filename,filelen,fnum
+    def renamefile(self,headStr):
+        if "filename" in headStr.keys():
+            filename=headStr["filename"]
+            newname=self.homepath+"/"+filename
+            tmpname=newname+".down"
+            file = QtCore.QFile(tmpname)
+            if file.exists():
+                file.rename(tmpname,newname)
+                return newname
+        return False
     def initRecv(self):
         self.headSize=0
         # self.bytesReceive=0
@@ -185,7 +199,7 @@ class TcpServer(QTcpServer):
 
         #新建线程
         # print("stat to socket thread")
-        socket_t=ServerSocketThread(socketId,self)
+        socket_t = ServerSocketThread(socketId,self)
         socket_t.signRecv.connect(self.soltRecvMsg)
         socket_t.signLog.connect(self.soltLogPrint)
         socket_t.start()
@@ -199,11 +213,14 @@ class Server(QtCore.QThread):
     def __init__(self, parent=None):
         super(Server, self).__init__(parent)
 
-        self.tcpServer = TcpServer(self)  #指定父对象自动回收空间 监听套接字                     
-        self.tcpServer.listen(QHostAddress.Any, 8721) #通信套接字 any默认绑定当前网卡的所有IP
-        self.tcpServer.signRecv.connect(self.soltRecvMsg)
-        self.tcpServer.signLog.connect(self.soltRecvLogMsg)
+    # def run(self):
+        tcpServer = TcpServer(self)  #指定父对象自动回收空间 监听套接字                     
+        tcpServer.listen(QHostAddress.Any, 8721) #通信套接字 any默认绑定当前网卡的所有IP
+        tcpServer.signRecv.connect(self.soltRecvMsg)
+        tcpServer.signLog.connect(self.soltRecvLogMsg)
+        # self.exec_()
     def soltRecvMsg(self,ids,msg):
+        # print(1)
         self.signRecv.emit(ids,msg)
     def soltRecvLogMsg(self,logMsg):
         self.signLog.emit(logMsg)

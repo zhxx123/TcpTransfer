@@ -9,7 +9,7 @@ import json
 from PyQt5 import QtCore, QtGui, QtWidgets
 from gui import Ui_MainWindow
 import time
-
+import threading
 def _toUTF8(s):
     return str(s)
 try:
@@ -20,7 +20,7 @@ except AttributeError:
 SIZEOF_INT64=8
 SIZEOF_HEAD_INT=SIZEOF_INT64*2
 FileBlockSize=10*1024*1024
-    
+
 class TcpClient(QtCore.QThread):
     socketlist=[]
     socketInfo={}
@@ -28,13 +28,19 @@ class TcpClient(QtCore.QThread):
     signLog=QtCore.pyqtSignal(str)
     signFileBtn=QtCore.pyqtSignal(int)
     signFileBar=QtCore.pyqtSignal(int,int)
+    signThread=QtCore.pyqtSignal(str,int,int,"QByteArray")
+    signConfirm=QtCore.pyqtSignal(str)
+    signFileSpeed=QtCore.pyqtSignal(str,str)
     def __init__(self,parent=None):
         super(TcpClient, self).__init__(parent)
         self.blockBytes=FileBlockSize
         # self.bytesReceive=0
         self.fileBytes = 0
         self.headSize=0
-        self.sendInit()
+        self.flag=False
+        # self.sendInit()
+        self.signThread.connect(self.sendFile)
+        self.signConfirm.connect(self.sendFileConfirm)
     def isconnect(self,ip):
         if ip in self.socketlist:
             return True
@@ -76,10 +82,10 @@ class TcpClient(QtCore.QThread):
         self.sendMessage()
 
     def sendLocalMsg(self,filename):
-        self.sendInit()
+        # self.sendInit()
         qheaer=self.getHeaderMsg(filename);
         self.sendHeaderMsg(qheaer)
-        self.sendInit()
+        # self.sendInit()
     def sendMessage(self):
         if self.msgtype==1:
             self.sendLocalMsg(self.filename)
@@ -88,6 +94,13 @@ class TcpClient(QtCore.QThread):
             # self.signLog.emit(log_content)
             self.sendMsgFile(self.filename)
     def sendMsgFile(self,filename):
+        self.flag=True
+        crthread = threading.Thread(target=self.readFile, args=(filename,self.blockBytes))
+        crthread.daemon = True  # 设置随主线程退出
+        crthread.start()
+        self.flag=False
+        
+    def readFile(self,filename,blockbytes):
         # print("send file",filename)
         info = QtCore.QFileInfo(filename)
         fname=info.fileName()
@@ -102,27 +115,64 @@ class TcpClient(QtCore.QThread):
         # print("blockbytes",self.blockBytes)
         # print("fnum",fnum)
         i=0
+        start_time=int(time.time())
+        tmp_time=start_time
         while not fstream.atEnd():
             readsize=min(totalFBytes,self.blockBytes)
-            totalFBytes-=self.blockBytes
+            totalFBytes-=readsize
             filecont=fstream.readRawData(readsize)
             # print("send",i,readsize)
-            self.sendFile(fname,i,readsize,filecont)         
+            self.signThread.emit(fname,i,readsize,filecont)         
             i+=1
             self.signFileBar.emit(fnum,i)
+            self.flag=True
+            while self.flag:
+                time.sleep(0.5)
+            now_time=int(time.time())
+            about_time,speed=self.getAboutTime(now_time-tmp_time+0.1,readsize,i,totalFBytes)
+            self.signFileSpeed.emit(about_time+"s",speed)
+            tmp_time=now_time
         localfile.close()
         self.signFileBar.emit(fnum,fnum)
-        self.sendConfirm()
-
+        now_time=int(time.time())
+        ab_time=self.getTimeFromat(now_time-start_time)+"s"
+        self.signFileSpeed.emit(ab_time,"")
+        self.signConfirm.emit(fname)
+    def getAboutTime(self,timespan,readsize,fnum,totalsize):
+        speed=round(readsize/timespan,2)
+        if timespan == 0.1:
+            speed/=10
+        about_time=int(totalsize/speed)
+        sp_unit="B"
+        if speed>=1024:
+            sp_unit="KB"
+            speed=round(speed/1024,2)
+        if speed>=1024:
+            sp_unit="MB"
+            speed=round(speed/1024,2)
+        ab_result=self.getTimeFromat(about_time)
+        sp_result=str(speed)+sp_unit
+        return ab_result,sp_result
+    def getTimeFromat(self,about_time):
+        ab_unit=[]
+        if about_time>=60:
+            ab_unit.append(str(about_time%60))
+            about_time=int(about_time/60)
+        if about_time>=60:
+            ab_unit.append(str(about_time%60))
+            about_time=int(about_time/60)
+        ab_unit.append(str(about_time))
+        tmp_ab=ab_unit[::-1]
+        ab_result=':'.join(tmp_ab)
+        return ab_result
     def sendConfirm(self):
-        # print("send confirm")
-        self.sendInit()
         qheaer=self.confirmHeader();
         self.sendHeaderMsg(qheaer)
-        self.sendInit()
-    
+    def sendFileConfirm(self,fname):
+        qheaer=self.confirmHeader(3,fname);
+        self.sendHeaderMsg(qheaer)
     def readMessage(self):
-        stream = QDataStream(self.tcpSocket)                     #发送数据是以QByteArray数据类型发送过来的，所以接收数据也应该以此接收
+        stream = QDataStream(self.tcpSocket)
         stream.setVersion(QDataStream.Qt_5_4)
         while self.tcpSocket.bytesAvailable()>SIZEOF_HEAD_INT:
             if self.headSize==0:
@@ -134,6 +184,7 @@ class TcpClient(QtCore.QThread):
                 # print("client recv head:",qheader)
                 # self.bytesReceive += self.headSize
                 self.handlerMessage(qheader)
+                self.initRecv()
             else:
                 break
     def handlerMessage(self,headers):
@@ -145,13 +196,13 @@ class TcpClient(QtCore.QThread):
             type=headStr["type"]
         if type==3:
             if "status" in headStr and  headStr["status"]==0:
-                pass
+                self.flag=False
                 # self.closeConnect()#断开连接
     def sendFile(self,fname,fnum,filelen,filecont):
         self.sendInit()
         qheader=self.getHeader(fname,filelen,fnum,2);
         self.sendmsg(qheader,filecont)
-        self.sendInit()
+        # self.sendInit()
     def sendmsg(self,qheader,filecont):
         self.outBlock = QByteArray()
         sendout = QDataStream(self.outBlock, QIODevice.WriteOnly)
@@ -190,10 +241,12 @@ class TcpClient(QtCore.QThread):
         self.tcpSocket.disconnectFromHost()
         self.tcpSocket.close()
         # self.sign.emit(1)
+    def initRecv(self):
+        self.headSize=0
     def sendInit(self):
         # print("client sent init")
         self.fileBytes=0
-        self.headBytes=0
+        # self.flag=False
     def getHeader(self,fname,flen,fnum,type=0):
         data={}
         data["type"]=type
@@ -203,12 +256,14 @@ class TcpClient(QtCore.QThread):
         data["fnum"]=fnum
         strs=json.dumps(data)
         return _fromUtf8(strs)
-    def confirmHeader(self,type=3):
+    def confirmHeader(self,type=3,fname=""):
         data={}
         data["type"]=type
         data["id"] =self.id
         data["confirm"]="send"
         data["status"] =0
+        if fname != "":
+            data["filename"]=fname
         strs=json.dumps(data)
         return _fromUtf8(strs)
     def getHeaderMsg(self,contant):
@@ -225,12 +280,14 @@ class Client(QtCore.QThread):
     signFileBtn=QtCore.pyqtSignal(int)
     signFileBar=QtCore.pyqtSignal(int,int)
     signSend=QtCore.pyqtSignal(str,str,str,int,str) #ip,port, type, msg
+    signFileSpeed=QtCore.pyqtSignal(str,str)
     def __init__(self,parent=None):
         super(Client, self).__init__(parent)
         self.id="zhxx"
         self.ip="127.0.0.1"
         self.port="8721"
-        tcpclient=TcpClient(self)
+    def run(self):
+        tcpclient=TcpClient()
         # client -> tcpclient
         self.signSend.connect(tcpclient.slotTcpSendMsg)
         # client -> MainUi
@@ -240,7 +297,9 @@ class Client(QtCore.QThread):
         tcpclient.signFileBtn.connect(self.soltFileUi)
         tcpclient.signFileBar.connect(self.soltFileBar)
         tcpclient.signLog.connect(self.soltLogPrint)
+        tcpclient.signFileSpeed.connect(self.soltFileSpeed)
         tcpclient.start()
+        self.exec_()
         # print("client init")
     def soltRecvMsg(self,msg):
         # print(msg)
@@ -254,6 +313,8 @@ class Client(QtCore.QThread):
         pass
     def soltFileBar(self,total,now):
         self.signFileBar.emit(total,now)
+    def soltFileSpeed(self,str_time,str_speed):
+        self.signFileSpeed.emit(str_time,str_speed)
         pass
     def soltLogPrint(self,logMsg):
         self.signLog.emit(logMsg)
