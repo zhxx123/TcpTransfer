@@ -6,6 +6,7 @@ import sys
 import os
 import math
 import json
+import random
 from PyQt5 import QtCore, QtGui, QtWidgets
 from gui import Ui_MainWindow
 import time
@@ -117,6 +118,8 @@ class TcpClient(QtCore.QThread):
         i=0
         start_time=int(time.time())
         tmp_time=start_time
+        tmp_speed=""
+        tmp_total_time=""
         while not fstream.atEnd():
             readsize=min(totalFBytes,self.blockBytes)
             totalFBytes-=readsize
@@ -127,18 +130,33 @@ class TcpClient(QtCore.QThread):
             self.signFileBar.emit(fnum,i)
             self.flag=True
             while self.flag:
+                if len(tmp_speed)>0:
+                    self.signFileSpeed.emit(time_total_time+"s",self.getRandomTime(tmp_speed))
                 time.sleep(0.5)
             now_time=int(time.time())
-            about_time,speed=self.getAboutTime(now_time-tmp_time+0.1,readsize,i,totalFBytes)
+            about_time,speed=self.getAboutTime(now_time-tmp_time+0.1,readsize,totalFBytes)
             self.signFileSpeed.emit(about_time+"s",speed)
             tmp_time=now_time
+            tmp_speed=speed
+            time_total_time=about_time
         localfile.close()
         self.signFileBar.emit(fnum,fnum)
         now_time=int(time.time())
         ab_time=self.getTimeFromat(now_time-start_time)+"s"
         self.signFileSpeed.emit(ab_time,"")
         self.signConfirm.emit(fname)
-    def getAboutTime(self,timespan,readsize,fnum,totalsize):
+    def getRandomTime(self,speed):
+        increment=random.randint(-2,3)
+        increment_dot=random.randint(-5,8)
+        speeds=""
+        if 'MB' in speed:
+            speeds=str(float(speed[:-2])+increment*0.1)+"MB"
+        elif 'KB' in speed:
+             speeds=str(float(speed[:-2])+increment*2+increment_dot*0.05)+"KB"
+        elif 'B' in speed:
+             speeds=str(float(speed[:-1])+increment)+"B"
+        return speeds
+    def getAboutTime(self,timespan,readsize,totalsize):
         speed=round(readsize/timespan,2)
         if timespan == 0.1:
             speed/=10
